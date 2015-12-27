@@ -3,7 +3,7 @@ package com.example.cliff.fallouthackinghelper;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.method.KeyListener;
+import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -36,6 +36,17 @@ public class MainActivity extends AppCompatActivity {
         currentButton.setChecked(true);
     }
 
+    public char getChart(int r, int c) {
+        return charGrid[r][c];
+    }
+
+    public Pair<Integer, Integer> getRC() {
+        int row = gridIndex / COLS;
+        int col = gridIndex - (row * COLS);
+
+        return new Pair<Integer, Integer>(row, col);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         final View.OnFocusChangeListener editFocus = new View.OnFocusChangeListener() {
             public void onFocusChange(View v, boolean hasFocus) {
                 thisAct.setEditFocus(hasFocus);
-                if (hasFocus == true) {
+                if (hasFocus) {
                     thisAct.hideCurrentButton();
                     ((EditText) v).setText("");
                 } else {
@@ -74,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
         final TextView.OnEditorActionListener editAct = new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 v.clearFocus();
+                // Add code to implement likeness check.
 
                 return true;
             }
@@ -104,14 +116,18 @@ public class MainActivity extends AppCompatActivity {
                         e.setText("");
                         e.setOnFocusChangeListener(editFocus);
                         e.setOnEditorActionListener(editAct);
-                        // Add textChanged listener to implement likeness check.
+
                     }
                 }
             }
         });
 
         ToggleButton kb = (ToggleButton) findViewById(R.id.keyButton);
+
         /*
+
+            cw: Another method for soft keyboard access.
+
         kb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -181,9 +197,8 @@ public class MainActivity extends AppCompatActivity {
                 currentButton.setTextOn(String.valueOf(c));
                 currentButton.setTextOff(String.valueOf(c));
 
-                int row = gridIndex / COLS;
-                int col = gridIndex - (row * COLS);
-                charGrid[row][col] = c;
+                Pair<Integer, Integer> rc = getRC();
+                charGrid[rc.first][rc.second] = c;
                 selectNextButton();
 
                 return true;
