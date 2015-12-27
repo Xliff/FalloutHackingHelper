@@ -14,11 +14,15 @@ import android.widget.TextView;
 import android.widget.ToggleButton;
 
 public class MainActivity extends AppCompatActivity {
+    private final int ROWS = 10;
+    private final int COLS = 10;
+
     private ToggleButton currentButton;
     private GridLayout grid;
     private int gridIndex;
     private int gridCount;
     private boolean inEditText = false;
+    private char[][] charGrid = new char[ROWS][COLS];
 
     public void setEditFocus(boolean hasFocus) {
         inEditText = hasFocus;
@@ -100,6 +104,7 @@ public class MainActivity extends AppCompatActivity {
                         e.setText("");
                         e.setOnFocusChangeListener(editFocus);
                         e.setOnEditorActionListener(editAct);
+                        // Add textChanged listener to implement likeness check.
                     }
                 }
             }
@@ -172,13 +177,15 @@ public class MainActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_X:
             case KeyEvent.KEYCODE_Y:
             case KeyEvent.KEYCODE_Z:
-                currentButton.setTextOn(
-                    String.valueOf(Character.toUpperCase(event.getDisplayLabel()))
-                );
-                currentButton.setTextOff(
-                    String.valueOf(Character.toUpperCase(event.getDisplayLabel()))
-                );
+                char c = Character.toUpperCase(event.getDisplayLabel());
+                currentButton.setTextOn(String.valueOf(c));
+                currentButton.setTextOff(String.valueOf(c));
+
+                int row = gridIndex / COLS;
+                int col = gridIndex - (row * COLS);
+                charGrid[row][col] = c;
                 selectNextButton();
+
                 return true;
 
             case KeyEvent.KEYCODE_ENTER:
@@ -208,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Set new current button.
         currentButton = (ToggleButton)v;
-        // Highlight button.
+        // Highlight button
         currentButton.setChecked(true);
     }
 
