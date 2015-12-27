@@ -1,6 +1,7 @@
 package com.example.cliff.fallouthackinghelper;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
@@ -13,9 +14,15 @@ import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.util.Vector;
+
 public class MainActivity extends AppCompatActivity {
-    private final int ROWS = 10;
-    private final int COLS = 10;
+    private final int ROWS = 12;
+
+    // cw: WHOOPS! MASTER PASSWORDS CAN BE AS LONG AS 12 CHARS!
+    // That is a must-fix, as the current layout is only good through Advanced hacking.
+
+    private final int COLS = 12;
 
     private ToggleButton currentButton;
     private GridLayout grid;
@@ -23,6 +30,8 @@ public class MainActivity extends AppCompatActivity {
     private int gridCount;
     private boolean inEditText = false;
     private char[][] charGrid = new char[ROWS][COLS];
+    private Vector<EditText> likeVec = new Vector<>();
+    private int[] likenessByRow = new int[ROWS];
 
     public void setEditFocus(boolean hasFocus) {
         inEditText = hasFocus;
@@ -36,15 +45,23 @@ public class MainActivity extends AppCompatActivity {
         currentButton.setChecked(true);
     }
 
-    public char getChart(int r, int c) {
+    public char getChar(int r, int c) {
         return charGrid[r][c];
     }
 
     public Pair<Integer, Integer> getRC() {
-        int row = gridIndex / COLS;
-        int col = gridIndex - (row * COLS);
+        return getRC(gridIndex);
+    }
 
-        return new Pair<Integer, Integer>(row, col);
+    public Pair<Integer, Integer> getRC(int gi) {
+        int row = gi / COLS;
+        int col = gi - (row * COLS);
+
+        return new Pair<>(row, col);
+    }
+
+    public Pair<Integer, Integer> getRC(View v) {
+        return getRC(grid.indexOfChild(v));
     }
 
     @Override
@@ -84,8 +101,16 @@ public class MainActivity extends AppCompatActivity {
         // Force return key to remove focus from the EditText and return it to the Activity.
         final TextView.OnEditorActionListener editAct = new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                int row = getRC(v).first;
+
                 v.clearFocus();
                 // Add code to implement likeness check.
+                if (v.getText().equals("0")) {
+                    thisAct.handleZeroLikeness();
+                } else {
+                    thisAct.handleLikeness();
+                }
+                likenessByRow[row] = Integer.valueOf(v.getText().toString());
 
                 return true;
             }
@@ -160,7 +185,53 @@ public class MainActivity extends AppCompatActivity {
         gridIndex = 0;
         currentButton = (ToggleButton)grid.getChildAt(gridIndex);
         currentButton.setChecked(true);
+
+        // cw: Helper struct for likeness computations.
+        for (int gi = 0; gi < gridCount; gi++) {
+            View v = grid.getChildAt(gi);
+            if (!(v instanceof EditText)) continue;
+            likeVec.add((EditText)v);
+        }
     }
+
+    public void handleZeroLikeness() {
+        Pair<Integer, Integer> rc = getRC();
+
+        // cw: Please note that the layout is 1-based because of laziness
+        int textRow = rc.first - 1;
+        for (int r = 0; r < ROWS; r++) {
+            if (r == textRow) continue;
+            for (int c = 0; c < COLS; c++) {
+                if (charGrid[r][c] == charGrid[textRow][c]) {
+                    muteRow(r);
+                    break;
+                }
+            }
+        }
+    }
+
+    public void handleLikeness() {
+
+    }
+
+    public void muteRow(int row) {
+        int gIndex = ((row + 1) * COLS) - 1;
+
+        View v;
+        do {
+            v = grid.getChildAt(gIndex++);
+            if (v instanceof ToggleButton) {
+                // cw: Probably better to use a different selector and a new set of drawables
+                // instead if programatically setting the color.
+                //
+                // This will do for now, though.
+                v.setBackgroundColor(Color.parseColor("#333333"));
+            }
+        } while (v instanceof ToggleButton);
+    }
+
+    // cw: We'll need a highlightRow() [for most probable options and a restoreRow() [to
+    // de-emphasize rows that may have been previously highlighted].
 
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
@@ -210,6 +281,8 @@ public class MainActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_DEL:
                 selectPrevButton();
                 return true;
+
+            // cw: Should probably add actions for arrow keys. Maybe just horizontal ones?
 
             default:
                 return super.onKeyUp(keyCode, event);
