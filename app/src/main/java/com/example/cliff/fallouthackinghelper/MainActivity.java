@@ -9,6 +9,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.GridLayout;
 import android.widget.TextView;
@@ -64,25 +65,53 @@ public class MainActivity extends AppCompatActivity {
         return getRC(grid.indexOfChild(v));
     }
 
+    // cw: Clear grid action. Doesn't depend on onCreate() so we define it here for cleanliness.
+    final View.OnClickListener clearAct = new View.OnClickListener() {
+        @Override
+        public void onClick(View vd) {
+            for (int i = 0; i < grid.getChildCount(); i++) {
+                View v = grid.getChildAt(i);
+
+                if (v instanceof ToggleButton) {
+                    ToggleButton b = (ToggleButton) v;
+
+                    b.setTextOn("");
+                    b.setTextOff("");
+                    b.setText("");
+                }
+            }
+
+            // One stop chop!
+            charGrid = new char[ROWS][COLS];
+
+            // Reset to beginning.
+            currentButton.setChecked(false);
+            gridIndex = 0;
+            currentButton = (ToggleButton)grid.getChildAt(gridIndex);
+            currentButton.setChecked(true);
+        }
+    };
+
+    // cw: Toggle button action. Doesn't depend on onCreate() so we define it here for cleanliness.
+    final View.OnClickListener buttonClick = new View.OnClickListener() {
+        public void onClick(View v) {
+            // Unhighlight previous button.
+            currentButton.setChecked(false);
+
+            // Set current button to the one clicked.
+            currentButton = (ToggleButton) v;
+            currentButton.setSelected(true);
+            currentButton.invalidate();
+            currentButton.requestFocus();
+
+            // Update index variable.
+            gridIndex = grid.indexOfChild(v);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        final View.OnClickListener buttonClick = new View.OnClickListener() {
-            public void onClick(View v) {
-                // Unhighlight previous button.
-                currentButton.setChecked(false);
-
-                // Set current button to the one clicked.
-                currentButton = (ToggleButton) v;
-                currentButton.setSelected(true);
-                currentButton.invalidate();
-                currentButton.requestFocus();
-
-                // Update index variable.
-                gridIndex = grid.indexOfChild(v);
-            }
-        };
         setContentView(R.layout.activity_main);
 
         final MainActivity thisAct = this;
@@ -147,31 +176,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+
+        Button cb = (Button)findViewById(R.id.clearButton);
+        cb.setOnClickListener(clearAct);
+
         ToggleButton kb = (ToggleButton) findViewById(R.id.keyButton);
-
-        /*
-
-            cw: Another method for soft keyboard access.
-
-        kb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                InputMethodManager inputMethodManager = (InputMethodManager)getSystemService(
-                    Context.INPUT_METHOD_SERVICE
-                );
-                if (isChecked) {
-                    inputMethodManager.showSoftInput(
-                            currentButton, InputMethodManager.SHOW_FORCED
-                    );
-                    windowToken = currentButton.getWindowToken();
-                } else {
-                    inputMethodManager.hideSoftInputFromWindow(windowToken, 0);
-                }
-                buttonView.setChecked(isChecked);
-            }
-        });
-        */
-
         kb.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
