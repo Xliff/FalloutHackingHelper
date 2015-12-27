@@ -264,9 +264,11 @@ public class MainActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_X:
             case KeyEvent.KEYCODE_Y:
             case KeyEvent.KEYCODE_Z:
-                char c = Character.toUpperCase(event.getDisplayLabel());
-                currentButton.setTextOn(String.valueOf(c));
-                currentButton.setTextOff(String.valueOf(c));
+            case KeyEvent.KEYCODE_SPACE:
+                Character c = (keyCode == KeyEvent.KEYCODE_SPACE) ?
+                     null : Character.toUpperCase(event.getDisplayLabel());
+                currentButton.setTextOn((c.equals(null)) ? "" : String.valueOf(c));
+                currentButton.setTextOff((c.equals(null)) ? "" : String.valueOf(c));
 
                 Pair<Integer, Integer> rc = getRC();
                 charGrid[rc.first][rc.second] = c;
@@ -282,7 +284,15 @@ public class MainActivity extends AppCompatActivity {
                 selectPrevButton();
                 return true;
 
-            // cw: Should probably add actions for arrow keys. Maybe just horizontal ones?
+            case KeyEvent.KEYCODE_SOFT_LEFT:
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                selectPrevButton();
+                return true;
+
+            case KeyEvent.KEYCODE_SOFT_RIGHT:
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                selectNextButton();
+                return true;
 
             default:
                 return super.onKeyUp(keyCode, event);
