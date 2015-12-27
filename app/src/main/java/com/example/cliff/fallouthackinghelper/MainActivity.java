@@ -81,8 +81,10 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            // One stop chop!
-            charGrid = new char[ROWS][COLS];
+            // cw: Manually clear the array rather than redefine a new one.
+            for (int r = 0; r < ROWS; r++)
+                for (int c = 0; c < COLS; c++)
+                    charGrid[r][c] = '\0';
 
             // Reset to beginning.
             currentButton.setChecked(false);
