@@ -2,9 +2,12 @@ package com.example.cliff.fallouthackinghelper;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Pair;
+import android.util.SparseIntArray;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -15,14 +18,11 @@ import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import java.util.Random;
 import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
     private final int ROWS = 12;
-
-    // cw: WHOOPS! MASTER PASSWORDS CAN BE AS LONG AS 12 CHARS!
-    // That is a must-fix, as the current layout is only good through Advanced hacking.
-
     private final int COLS = 12;
 
     private ToggleButton currentButton;
@@ -33,6 +33,9 @@ public class MainActivity extends AppCompatActivity {
     private char[][] charGrid = new char[ROWS][COLS];
     private Vector<EditText> likeVec = new Vector<>();
     private int[] likenessByRow = new int[ROWS];
+    private SparseIntArray keySounds = new SparseIntArray();
+    private SoundPool mShortPlayer= null;
+    private Random rng = new Random();
 
     public void setEditFocus(boolean hasFocus) {
         inEditText = hasFocus;
@@ -82,9 +85,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // cw: Manually clear the array rather than redefine a new one.
-            for (int r = 0; r < ROWS; r++)
-                for (int c = 0; c < COLS; c++)
+            for (int r = 0; r < ROWS; r++) {
+                for (int c = 0; c < COLS; c++) {
                     charGrid[r][c] = '\0';
+                }
+                // Also clear helper structure values.
+                likenessByRow[r] = 0;
+                likeVec.get(r).setText("");
+            }
 
             // Reset to beginning.
             currentButton.setChecked(false);
@@ -111,10 +119,32 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    protected int getRandomKeySoundId() {
+        int keyIDs[] = {
+            R.raw.keyboard_1,
+            R.raw.keyboard_2,
+            R.raw.keyboard_3
+        };
+
+        return keyIDs[rng.nextInt(keyIDs.length)];
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // cw: Deprecated in API-21, but we are shooting for API-19.
+        // Please note, we only expect to use 1 sound at a time, but for those who type fast,
+        // we allocate 2 extra streams, just in case.
+        mShortPlayer = new SoundPool(3, AudioManager.STREAM_MUSIC, 0);
+
+        keySounds.put(R.raw.keyboard_1, mShortPlayer.load(this, R.raw.keyboard_1, 1));
+        keySounds.put(R.raw.keyboard_2, mShortPlayer.load(this, R.raw.keyboard_2, 1));
+        keySounds.put(R.raw.keyboard_3, mShortPlayer.load(this, R.raw.keyboard_3, 1));
+
+        grid = (GridLayout) findViewById(R.id.letterGrid);
+        gridCount = grid.getChildCount();
 
         final MainActivity thisAct = this;
         final View.OnFocusChangeListener editFocus = new View.OnFocusChangeListener() {
@@ -129,13 +159,14 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        // Force return key to remove focus from the EditText and return it to the Activity.
         final TextView.OnEditorActionListener editAct = new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                int row = getRC(v).first;
-
+                // cw: Force return key to remove focus from the EditText and return it to the
+                // Activity.
                 v.clearFocus();
-                // Add code to implement likeness check.
+
+                // Likeness check.
+                int row = getRC(v).first;
                 if (v.getText().equals("0")) {
                     thisAct.handleZeroLikeness();
                 } else {
@@ -147,8 +178,9 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        grid = (GridLayout) findViewById(R.id.letterGrid);
-        gridCount = grid.getChildCount();
+        // cw: Initialization actions that need to be performed after UI layout is complete.
+        // cw: But do they?!? -- May need to test this. Would clean the code up significantly if
+        // I didn't need [vto].
         ViewTreeObserver vto = grid.getViewTreeObserver();
         vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
@@ -178,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
         Button cb = (Button)findViewById(R.id.clearButton);
         cb.setOnClickListener(clearAct);
 
@@ -205,6 +236,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onDestroy() {
+        mShortPlayer.release();
+        keySounds.clear();
+
+        super.onDestroy();
+    }
+
     public void handleZeroLikeness() {
         Pair<Integer, Integer> rc = getRC();
 
@@ -214,7 +253,12 @@ public class MainActivity extends AppCompatActivity {
             if (r == textRow) continue;
             for (int c = 0; c < COLS; c++) {
                 if (charGrid[r][c] == charGrid[textRow][c]) {
+                    EditText et = likeVec.get(r);
+                    if (et.getText().toString().equals("")) {
+                        et.setText("0");
+                    }
                     muteRow(r);
+
                     break;
                 }
             }
@@ -222,7 +266,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void handleLikeness() {
+        Pair<Integer, Integer> rc = getRC();
 
+        // cw: Please note that the layout is 1-based because of laziness
+        int textRow = rc.first - 1;
+        int newLikeness = Integer.valueOf(likeVec.get(textRow).getText().toString());
+
+
+        for (int r = 0; r < ROWS; r++) {
+            if (r == textRow) continue;
+
+            // cw: Will have to check previous rows of likeness > 0 to see if there are common
+            // characters.
+
+            // May need a password var that tracks all rows with common letters so that we can
+            // properly highlight candidates.
+        }
     }
 
     public void muteRow(int row) {
@@ -244,9 +303,15 @@ public class MainActivity extends AppCompatActivity {
     // cw: We'll need a highlightRow() [for most probable options and a restoreRow() [to
     // de-emphasize rows that may have been previously highlighted].
 
+    public void restoreRow(int row) {
+
+    }
+
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
         if (inEditText) return super.onKeyUp(keyCode, event);
+
+        boolean handled = false;
 
         switch (keyCode) {
             case KeyEvent.KEYCODE_A:
@@ -278,36 +343,48 @@ public class MainActivity extends AppCompatActivity {
             case KeyEvent.KEYCODE_SPACE:
                 Character c = (keyCode == KeyEvent.KEYCODE_SPACE) ?
                      null : Character.toUpperCase(event.getDisplayLabel());
-                currentButton.setTextOn((c.equals(null)) ? "" : String.valueOf(c));
-                currentButton.setTextOff((c.equals(null)) ? "" : String.valueOf(c));
+                currentButton.setTextOn((c == null) ? "" : String.valueOf(c));
+                currentButton.setTextOff((c == null ) ? "" : String.valueOf(c));
 
                 Pair<Integer, Integer> rc = getRC();
-                charGrid[rc.first][rc.second] = c;
+                charGrid[rc.first][rc.second] = (c == null) ? '\0' : c;
                 selectNextButton();
-
-                return true;
+                handled = true;
+                break;
 
             case KeyEvent.KEYCODE_ENTER:
                 selectNextRow();
-                return true;
+                handled = true;
+                break;
 
             case KeyEvent.KEYCODE_DEL:
                 selectPrevButton();
-                return true;
+                handled = true;
+                break;
 
             case KeyEvent.KEYCODE_SOFT_LEFT:
             case KeyEvent.KEYCODE_DPAD_LEFT:
                 selectPrevButton();
-                return true;
+                handled = true;
+                break;
 
             case KeyEvent.KEYCODE_SOFT_RIGHT:
             case KeyEvent.KEYCODE_DPAD_RIGHT:
                 selectNextButton();
-                return true;
+                handled = true;
+                break;
 
             default:
                 return super.onKeyUp(keyCode, event);
         }
+
+        if (handled) {
+            int keySoundId = keySounds.get(getRandomKeySoundId());
+
+            mShortPlayer.play(keySoundId, 0.99f, 0.99f, 0, 0, 1);
+        }
+
+        return handled;
     }
 
 
@@ -355,14 +432,13 @@ public class MainActivity extends AppCompatActivity {
         } while (v instanceof ToggleButton);
 
         // We must be at a space, so next row starts 2 children after.
-        // We check to insure that we wrap around properly.
+        // Also check to insure that we wrap around properly.
         v = grid.getChildAt((gridIndex + 2) % gridCount);
         if (v instanceof ToggleButton) {
             currentButton.setChecked(false);
             currentButton = (ToggleButton)v;
             currentButton.setChecked(true);
         }
-
     }
 
 }
